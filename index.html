@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analiza Rynku Materiałów Budowlanych: Dwa Domki w Jaworku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthy Harmony -->
+    <!-- Application Structure Plan: Aplikację zaprojektowano jako interaktywny pulpit nawigacyjny (dashboard) z nawigacją na górze, co umożliwia swobodne przełączanie się między kluczowymi sekcjami analizy: Wprowadzenie, Analiza Materiałów (z podziałem na bale, ścianki i dach), Interaktywny Kalkulator Kosztów oraz Strategia Zakupowa. Taka struktura została wybrana, aby odejść od liniowego formatu raportu i dać użytkownikowi narzędzie do aktywnego badania danych, porównywania wariantów i natychmiastowego widzenia wpływu decyzji na budżet. Kluczowe interakcje to dynamiczne wykresy porównawcze, filtrowanie dostawców i kalkulator kosztów aktualizujący się w czasie rzeczywistym. Celem jest ułatwienie podjęcia świadomej decyzji, a nie tylko prezentacja danych. -->
+    <!-- Visualization & Content Choices:
+        - Ilość drewna: Cel: Informacja. Prezentacja: Karta z wyliczeniami. Interakcja: Brak (statyczna kalkulacja). Uzasadnienie: Proste przedstawienie podstawowych założeń. Metoda: HTML/JS.
+        - Porównanie gatunków drewna: Cel: Porównanie. Prezentacja: Wykres słupkowy (cena vs. trwałość) oraz szczegółowe opisy. Interakcja: Przyciski filtrujące, które podświetlają dane na wykresie i zmieniają wyświetlany opis. Uzasadnienie: Wizualne porównanie kluczowych parametrów jest szybsze w odbiorze niż tabela. Biblioteka: Chart.js.
+        - Porównanie pokryć dachowych: Cel: Porównanie wielokryterialne. Prezentacja: Wykres radarowy. Interakcja: Kliknięcie na legendę lub przyciski, aby pokazać/ukryć dane na wykresie i zaktualizować panel z rekomendacją. Uzasadnienie: Wykres radarowy doskonale ukazuje mocne i słabe strony każdej opcji w wielu wymiarach jednocześnie. Biblioteka: Chart.js.
+        - Kalkulator kosztów: Cel: Synteza. Prezentacja: Panel z suwakami i podsumowaniem kosztów. Interakcja: Przesuwanie suwaków (wybór grubości bala, rodzaju drewna, pokrycia) powoduje natychmiastową aktualizację całkowitego kosztorysu. Uzasadnienie: To kluczowe narzędzie, które zamienia analizę w praktyczny planer budżetu. Metoda: HTML/JS.
+        - Strategia zakupowa: Cel: Organizacja. Prezentacja: Oś czasu. Interakcja: Brak, statyczna grafika. Uzasadnienie: Wizualna reprezentacja harmonogramu jest bardziej przystępna niż tekst. Metoda: HTML/CSS.
+        - Lista dostawców: Cel: Informacja. Prezentacja: Interaktywna tabela. Interakcja: Filtrowanie po województwie. Uzasadnienie: Ułatwia znalezienie dostawców w preferowanej lokalizacji. Metoda: HTML/JS.
+        -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #FDFBF8;
+            color: #3D405B;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-button.active, .nav-button:hover {
+            color: #8D5B4C;
+            border-bottom-color: #8D5B4C;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #8D5B4C;
+            color: #FFFFFF;
+        }
+        .btn-primary:hover {
+            background-color: #7a4f42;
+        }
+        .btn-secondary {
+            background-color: #E0E0E0;
+            color: #3D405B;
+        }
+        .btn-secondary.active, .btn-secondary:hover {
+            background-color: #A47869;
+            color: white;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+         @media (min-width: 768px) { .chart-container { height: 350px; } }
+        
+        input[type="radio"]:checked + label {
+            background-color: #8D5B4C;
+            color: white;
+            border-color: #7a4f42;
+        }
+        .lang-switcher button.active {
+            font-weight: bold;
+            color: #8D5B4C;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <header class="relative text-center mb-10">
+            <div class="absolute top-0 right-0 lang-switcher">
+                <button id="lang-pl" class="px-2 py-1 text-sm active">PL</button>
+                <span class="text-gray-400">|</span>
+                <button id="lang-en" class="px-2 py-1 text-sm">EN</button>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-800" data-translate="main_title">Interaktywny Przewodnik Budowlany</h1>
+            <p class="text-lg text-gray-600 mt-2" data-translate="main_subtitle">Optymalizacja kosztów budowy dwóch domków letniskowych w Jaworku</p>
+        </header>
+
+        <nav class="flex justify-center space-x-4 sm:space-x-8 mb-12 border-b border-gray-200 pb-2">
+            <button class="nav-button font-semibold text-sm sm:text-base py-2 px-3 active" data-target="start" data-translate="nav_start">Start</button>
+            <button class="nav-button font-semibold text-sm sm:text-base py-2 px-3" data-target="materials" data-translate="nav_materials">Analiza Materiałów</button>
+            <button class="nav-button font-semibold text-sm sm:text-base py-2 px-3" data-target="costs" data-translate="nav_costs">Kalkulator Kosztów</button>
+            <button class="nav-button font-semibold text-sm sm:text-base py-2 px-3" data-target="strategy" data-translate="nav_strategy">Strategia i Harmonogram</button>
+        </nav>
+        
+        <main>
+            <section id="start" class="section active animate-fade-in">
+                 <div class="card p-8">
+                    <h2 class="text-2xl font-bold mb-4 text-center" data-translate="start_title">Witaj w Analizie Twojego Projektu!</h2>
+                    <p class="text-gray-700 mb-6 text-center max-w-3xl mx-auto" data-translate="start_intro">
+                        Ta aplikacja to interaktywny przewodnik, który pomoże Ci zrozumieć rynek materiałów budowlanych i podjąć najlepsze decyzje przy budowie dwóch całorocznych domków z bali w standardzie "off-grid". Znajdziesz tu analizę drewna konstrukcyjnego, pokryć dachowych, listę potencjalnych dostawców oraz dynamiczny kalkulator kosztów. Celem jest znalezienie optymalnego stosunku jakości do ceny, aby Twój projekt został zrealizowany z sukcesem wiosną 2026 roku.
+                    </p>
+                    <div class="grid md:grid-cols-3 gap-6 text-center">
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2" data-translate="start_loc_title">Lokalizacja</h3>
+                            <p class="text-gray-600">Jaworek, gmina Międzylesie</p>
+                            <p class="text-sm text-gray-500" data-translate="start_loc_region">(woj. dolnośląskie)</p>
+                        </div>
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2" data-translate="start_obj_title">Obiekt</h3>
+                            <p class="text-gray-600" data-translate="start_obj_desc">2x Domek z bali 35m²</p>
+                            <p class="text-sm text-gray-500" data-translate="start_obj_type">(parterowy, całoroczny)</p>
+                        </div>
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2" data-translate="start_plan_title">Wymogi MPZP</h3>
+                            <p class="text-gray-600" data-translate="start_plan_desc">Dach stromy 30-50°</p>
+                            <p class="text-sm text-gray-500" data-translate="start_plan_color">(czerwony lub szary)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="materials" class="section">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold" data-translate="mat_title">Analiza Rynku Materiałów</h2>
+                    <p class="text-lg text-gray-600 mt-2" data-translate="mat_subtitle">Porównaj dostępne opcje drewna i pokryć dachowych, aby dokonać najlepszego wyboru.</p>
+                </div>
+
+                <div class="space-y-12">
+                    <div class="card p-6 sm:p-8">
+                        <h3 class="text-2xl font-bold mb-4" data-translate="mat_logs_title">1. Bale Zewnętrzne (Ściany Konstrukcyjne)</h3>
+                        <p class="mb-6 text-gray-700" data-translate="mat_logs_intro">W tej sekcji analizujemy kluczowy element konstrukcyjny Twoich domków – bale kwadratowe. Znajdziesz tu szacunkową ilość potrzebnego materiału, porównanie gatunków drewna pod kątem ceny, trwałości i właściwości, a także rekomendacje dotyczące technologii i grubości bali. Wszystko to, by zapewnić optymalną izolację i wytrzymałość konstrukcji przez cały rok.</p>
+                        
+                        <div class="grid md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-amber-50 p-6 rounded-lg text-center">
+                                <h4 class="text-lg font-semibold mb-2" data-translate="mat_logs_amount_title">Szacowana Ilość Bali</h4>
+                                <p class="text-4xl font-bold text-amber-800">~20 m³</p>
+                                <p class="text-sm text-gray-600" data-translate="mat_logs_amount_desc">dla dwóch domków (ściany zewn.)</p>
+                            </div>
+                            <div class="bg-green-50 p-6 rounded-lg text-center">
+                                <h4 class="text-lg font-semibold mb-2" data-translate="mat_logs_thick_title">Rekomendowana Grubość</h4>
+                                <p class="text-4xl font-bold text-green-800">140 mm</p>
+                                <p class="text-sm text-gray-600" data-translate="mat_logs_thick_desc">optymalna dla domku całorocznego</p>
+                            </div>
+                            <div class="bg-sky-50 p-6 rounded-lg text-center">
+                                <h4 class="text-lg font-semibold mb-2" data-translate="mat_logs_tech_title">Rekomendowana Technologia</h4>
+                                <p class="text-2xl font-bold text-sky-800 leading-tight" data-translate="mat_logs_tech_desc1">Suszone Komorowo, Lite lub Klejone (KVH)</p>
+                                <p class="text-sm text-gray-600" data-translate="mat_logs_tech_desc2">zapewnia stabilność wymiarową</p>
+                            </div>
+                        </div>
+
+                        <div class="grid lg:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <h4 class="text-xl font-semibold mb-4 text-center" data-translate="mat_wood_comp_title">Porównanie Gatunków Drewna</h4>
+                                <div class="flex justify-center space-x-2 mb-4">
+                                    <button class="btn-secondary px-4 py-1 rounded-full text-sm active" data-wood="all" data-translate="mat_wood_all">Wszystkie</button>
+                                    <button class="btn-secondary px-4 py-1 rounded-full text-sm" data-wood="swierk" data-translate="mat_wood_spruce">Świerk</button>
+                                    <button class="btn-secondary px-4 py-1 rounded-full text-sm" data-wood="sosna" data-translate="mat_wood_pine">Sosna</button>
+                                    <button class="btn-secondary px-4 py-1 rounded-full text-sm" data-wood="modrzew" data-translate="mat_wood_larch">Modrzew</button>
+                                </div>
+                                <div class="chart-container h-64 md:h-80">
+                                    <canvas id="woodComparisonChart"></canvas>
+                                </div>
+                            </div>
+                            <div id="wood-details" class="bg-gray-50 p-6 rounded-lg min-h-[300px]">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 sm:p-8">
+                        <h3 class="text-2xl font-bold mb-4" data-translate="mat_part_title">2. Drewno na Ścianki Działowe</h3>
+                        <p class="mb-6 text-gray-700" data-translate="mat_part_intro">Aby zachować spójność wizualną wnętrza, ścianki działowe powinny mieć przekrój zbliżony do bali zewnętrznych. Nie muszą to być jednak pełne bale. Poniżej przedstawiamy bardziej ekonomiczne, a równie estetyczne rozwiązanie.</p>
+                        <div class="bg-stone-50 p-6 rounded-lg flex flex-col md:flex-row items-center gap-6">
+                            <div class="text-center md:text-left">
+                                <p class="text-lg font-semibold" data-translate="mat_part_rec_mat">Rekomendowany Materiał:</p>
+                                <p class="text-2xl font-bold text-stone-800" data-translate="mat_part_rec_mat_desc1">Kantówka Strugana / Drewno Klejone (KVH)</p>
+                                <p class="text-sm text-gray-600" data-translate="mat_part_rec_mat_desc2">Przekrój: np. 140x80mm</p>
+                            </div>
+                            <div class="flex-grow text-center">
+                                <p class="text-gray-700" data-translate="mat_part_desc">Użycie kantówki struganej lub drewna klejonego KVH jest znacznie tańsze niż litych bali, a pozwala na uzyskanie gładkiej, estetycznej powierzchni ściany o pożądanym wyglądzie. Materiał ten jest zazwyczaj dostępny u tych samych dostawców, co bale konstrukcyjne.</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-lg font-semibold" data-translate="mat_part_cost_title">Szacowany Koszt:</p>
+                                <p class="text-2xl font-bold text-stone-800">1400 - 1900 PLN/m³</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card p-6 sm:p-8">
+                        <h3 class="text-2xl font-bold mb-4" data-translate="mat_roof_title">3. Analiza Pokryć Dachowych</h3>
+                        <p class="mb-6 text-gray-700" data-translate="mat_roof_intro">Zgodnie z wymogami MPZP, dach musi być pokryty materiałem w odcieniach czerwieni lub szarości, imitującym dachówkę. Poniżej porównujemy trzy popularne, lekkie i estetyczne alternatywy dla ciężkiej dachówki ceramicznej, idealne dla konstrukcji drewnianej. Interaktywny wykres pomoże Ci zwizualizować, która opcja najlepiej spełnia Twoje priorytety.</p>
+                         <div class="grid lg:grid-cols-2 gap-8 items-center">
+                            <div class="chart-container h-80 md:h-96">
+                                <canvas id="roofingRadarChart"></canvas>
+                            </div>
+                            <div id="roofing-details" class="bg-gray-50 p-6 rounded-lg min-h-[300px]">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="costs" class="section">
+                 <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold" data-translate="costs_title">Interaktywny Kalkulator Kosztów</h2>
+                    <p class="text-lg text-gray-600 mt-2" data-translate="costs_subtitle">Sprawdź, jak Twoje decyzje materiałowe wpływają na szacunkowy budżet.</p>
+                </div>
+                 <div class="card p-6 sm:p-8">
+                     <p class="text-gray-700 mb-6 text-center max-w-3xl mx-auto" data-translate="costs_intro">
+                        To narzędzie pozwala na dynamiczne oszacowanie łącznych kosztów materiałowych dla obu domków. Wybierz preferowane opcje dla drewna konstrukcyjnego i pokrycia dachowego. Kalkulator na bieżąco przeliczy całkowity koszt, pokazując, jak poszczególne wybory przekładają się na finalny budżet. To potężne narzędzie do planowania i optymalizacji wydatków.
+                    </p>
+                    <div class="grid lg:grid-cols-2 gap-8 items-start">
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-xl font-bold mb-4" data-translate="costs_selections_title">1. Wybierz Materiały</h4>
+                                <label class="font-semibold block mb-2" data-translate="costs_wood_species_label">Gatunek drewna:</label>
+                                <div class="flex flex-wrap gap-2" id="wood-species-selector">
+                                    <input type="radio" name="wood_species" id="wood_swierk" value="swierk" class="hidden" checked>
+                                    <label for="wood_swierk" class="px-4 py-2 border rounded-md cursor-pointer transition-colors" data-translate="wood_spruce">Świerk</label>
+                                    <input type="radio" name="wood_species" id="wood_sosna" value="sosna" class="hidden">
+                                    <label for="wood_sosna" class="px-4 py-2 border rounded-md cursor-pointer transition-colors" data-translate="wood_pine">Sosna</label>
+                                    <input type="radio" name="wood_species" id="wood_modrzew" value="modrzew" class="hidden">
+                                    <label for="wood_modrzew" class="px-4 py-2 border rounded-md cursor-pointer transition-colors" data-translate="wood_larch">Modrzew</label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="font-semibold block mb-2" data-translate="costs_wood_thick_label">Grubość bala:</label>
+                                <div class="flex flex-wrap gap-2" id="wood-thickness-selector">
+                                    <input type="radio" name="wood_thickness" id="thickness_120" value="t120" class="hidden">
+                                    <label for="thickness_120" class="px-4 py-2 border rounded-md cursor-pointer transition-colors">120 mm</label>
+                                    <input type="radio" name="wood_thickness" id="thickness_140" value="t140" class="hidden" checked>
+                                    <label for="thickness_140" class="px-4 py-2 border rounded-md cursor-pointer transition-colors">140 mm</label>
+                                    <input type="radio" name="wood_thickness" id="thickness_160" value="t160" class="hidden">
+                                    <label for="thickness_160" class="px-4 py-2 border rounded-md cursor-pointer transition-colors">160 mm</label>
+                                </div>
+                            </div>
+                             <div>
+                                <label class="font-semibold block mb-2" data-translate="costs_roof_type_label">Rodzaj pokrycia dachowego:</label>
+                                <div class="flex flex-wrap gap-2" id="roof-type-selector">
+                                    <input type="radio" name="roof_type" id="roof_gont" value="gont" class="hidden">
+                                    <label for="roof_gont" class="px-4 py-2 border rounded-md cursor-pointer transition-colors" data-translate="roof_shingles">Gont Bitumiczny</label>
+                                    <input type="radio" name="roof_type" id="roof_blachodachowka" value="blachodachowka" class="hidden" checked>
+                                    <label for="roof_blachodachowka" class="px-4 py-2 border rounded-md cursor-pointer transition-colors" data-translate="roof_metal">Blachodachówka</label>
+                                    <input type="radio" name="roof_type" id="roof_kompozyt" value="kompozyt" class="hidden">
+                                    <label for="roof_kompozyt" class="px-4 py-2 border rounded-md cursor-pointer transition-colors" data-translate="roof_composite">Płyta Kompozytowa</label>
+                                </div>
+                            </div>
+
+                            <div class="pt-6 mt-6 border-t">
+                                <h4 class="text-xl font-bold mb-4" data-translate="costs_custom_prices_title">2. Dostosuj Ceny (Oferta Własna)</h4>
+                                <p class="text-sm text-gray-600 mb-4" data-translate="costs_custom_prices_intro">Wprowadź ceny z otrzymanej oferty, aby uzyskać dokładniejsze obliczenia. Ceny podaj w PLN.</p>
+                                <div class="space-y-4">
+                                    <h5 class="font-semibold" data-translate="costs_custom_wood_title">Ceny drewna (za m³)</h5>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <div>
+                                            <label for="price_swierk" class="text-sm" data-translate="wood_spruce">Świerk</label>
+                                            <input type="number" id="price_swierk" class="w-full p-2 border rounded bg-white">
+                                        </div>
+                                        <div>
+                                            <label for="price_sosna" class="text-sm" data-translate="wood_pine">Sosna</label>
+                                            <input type="number" id="price_sosna" class="w-full p-2 border rounded bg-white">
+                                        </div>
+                                        <div>
+                                            <label for="price_modrzew" class="text-sm" data-translate="wood_larch">Modrzew</label>
+                                            <input type="number" id="price_modrzew" class="w-full p-2 border rounded bg-white">
+                                        </div>
+                                    </div>
+                                    <h5 class="font-semibold" data-translate="costs_custom_roof_title">Ceny pokrycia (za m²)</h5>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                         <div>
+                                            <label for="price_gont" class="text-sm" data-translate="roof_shingles">Gont</label>
+                                            <input type="number" id="price_gont" class="w-full p-2 border rounded bg-white">
+                                        </div>
+                                        <div>
+                                            <label for="price_blachodachowka" class="text-sm" data-translate="roof_metal">Blachodachówka</label>
+                                            <input type="number" id="price_blachodachowka" class="w-full p-2 border rounded bg-white">
+                                        </div>
+                                        <div>
+                                            <label for="price_kompozyt" class="text-sm" data-translate="roof_composite">Kompozyt</label>
+                                            <input type="number" id="price_kompozyt" class="w-full p-2 border rounded bg-white">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="price_partitions" class="font-semibold" data-translate="costs_custom_partition_title">Cena ścianek działowych (za m³)</label>
+                                        <input type="number" id="price_partitions" class="w-full p-2 border rounded bg-white">
+                                    </div>
+                                    <button id="reset-prices-btn" class="btn-secondary px-4 py-2 rounded-md" data-translate="costs_reset_btn">Przywróć Domyślne</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-6 sm:p-8 rounded-lg text-center sticky top-8">
+                            <h3 class="text-xl font-bold mb-2" data-translate="costs_summary_title">Szacowany Łączny Koszt</h3>
+                            <p class="text-5xl font-bold text-green-700" id="total-cost">PLN</p>
+                            <p class="text-lg text-gray-500 -mt-2 mb-4" id="total-cost-gbp">~ £</p>
+
+                            <div class="text-left space-y-3">
+                                <div>
+                                    <p class="flex justify-between"><span data-translate="costs_summary_logs">Bale zewnętrzne:</span> <span id="cost-wood" class="font-semibold"></span></p>
+                                    <p class="flex justify-end text-sm text-gray-500"><span id="cost-wood-gbp"></span></p>
+                                </div>
+                                <div>
+                                    <p class="flex justify-between"><span data-translate="costs_summary_partitions">Ścianki działowe:</span> <span id="cost-partitions" class="font-semibold"></span></p>
+                                    <p class="flex justify-end text-sm text-gray-500"><span id="cost-partitions-gbp"></span></p>
+                                </div>
+                                <div class="border-b pb-3">
+                                    <p class="flex justify-between"><span data-translate="costs_summary_roof">Pokrycie dachu:</span> <span id="cost-roof" class="font-semibold"></span></p>
+                                    <p class="flex justify-end text-sm text-gray-500"><span id="cost-roof-gbp"></span></p>
+                                </div>
+                                <div class="pt-2">
+                                    <p class="flex justify-between font-bold text-lg"><span data-translate="costs_summary_total">SUMA:</span> <span id="cost-total-sum" class="font-semibold"></span></p>
+                                    <p class="flex justify-end font-semibold text-gray-600"><span id="cost-total-sum-gbp"></span></p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-4" data-translate="costs_gbp_rate_note">Przeliczono po kursie 1 GBP = 5.15 PLN.</p>
+                            <p class="text-xs text-gray-500 mt-1" data-translate="costs_summary_disclaimer">*Koszty szacunkowe, nie stanowią oferty handlowej. Obejmują materiał na dwa domki.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="strategy" class="section">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold" data-translate="strat_title">Strategia Zakupowa i Harmonogram</h2>
+                    <p class="text-lg text-gray-600 mt-2" data-translate="strat_subtitle">Zaplanuj swoje działania, aby zoptymalizować koszty i uniknąć opóźnień.</p>
+                </div>
+                <div class="space-y-12">
+                     <div class="card p-6 sm:p-8">
+                        <h3 class="text-2xl font-bold mb-4" data-translate="strat_timeline_title">Harmonogram Działań do Wiosny 2026</h3>
+                        <p class="mb-6 text-gray-700" data-translate="strat_timeline_intro">Prawidłowe rozplanowanie działań w czasie jest kluczowe dla powodzenia projektu. Poniższa oś czasu przedstawia sugerowany harmonogram, który pozwoli na spokojne zebranie ofert, zamówienie materiałów i przygotowanie się do startu budowy. Wczesne zamówienie drewna (jesienią/zimą) może przynieść korzyści cenowe i gwarancję dostępności.</p>
+                        <div class="relative">
+                            <div class="border-l-2 border-gray-300 absolute h-full top-0 left-4"></div>
+                            <div class="space-y-8">
+                                <div class="flex items-center">
+                                    <div class="bg-gray-300 rounded-full h-8 w-8 z-10 flex items-center justify-center font-bold">1</div>
+                                    <div class="ml-8 bg-gray-50 p-4 rounded-lg w-full">
+                                        <h4 class="font-bold" data-translate="strat_timeline1_title">Lato / Jesień 2025: Finalizacja Projektu i Zbieranie Ofert</h4>
+                                        <p class="text-sm text-gray-600" data-translate="strat_timeline1_desc">Doprecyzuj projekt domków. Rozpocznij kontakt z wyselekcjonowanymi dostawcami. Zadaj kluczowe pytania i zbierz szczegółowe oferty.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="bg-gray-300 rounded-full h-8 w-8 z-10 flex items-center justify-center font-bold">2</div>
+                                    <div class="ml-8 bg-gray-50 p-4 rounded-lg w-full">
+                                        <h4 class="font-bold" data-translate="strat_timeline2_title">Jesień / Zima 2025: Wybór Dostawcy i Zamówienie Materiałów</h4>
+                                        <p class="text-sm text-gray-600" data-translate="strat_timeline2_desc">To najlepszy moment na zamówienie drewna. Ceny mogą być niższe, a tartaki mają więcej czasu na przygotowanie materiału. Podpisz umowę i wpłać zaliczkę.</p>
+                                    </div>
+                                </div>
+                                 <div class="flex items-center">
+                                    <div class="bg-gray-300 rounded-full h-8 w-8 z-10 flex items-center justify-center font-bold">3</div>
+                                    <div class="ml-8 bg-gray-50 p-4 rounded-lg w-full">
+                                        <h4 class="font-bold" data-translate="strat_timeline3_title">Wczesna Wiosna 2026: Zgłoszenie Budowy i Logistyka</h4>
+                                        <p class="text-sm text-gray-600" data-translate="strat_timeline3_desc">Złóż zgłoszenie budowy w starostwie powiatowym. Ustal z dostawcą dokładny termin i szczegóły transportu materiałów do Jaworka.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="bg-green-600 text-white rounded-full h-8 w-8 z-10 flex items-center justify-center font-bold">✓</div>
+                                    <div class="ml-8 bg-green-50 p-4 rounded-lg w-full">
+                                        <h4 class="font-bold" data-translate="strat_timeline4_title">Późna Wiosna 2026: Dostawa Materiałów i Start Budowy</h4>
+                                        <p class="text-sm text-gray-600" data-translate="strat_timeline4_desc">Po upływie 21 dni od zgłoszenia i przy braku sprzeciwu urzędu, możesz rozpocząć budowę!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                     </div>
+                     <div class="card p-6 sm:p-8">
+                         <h3 class="text-2xl font-bold mb-4" data-translate="strat_questions_title">Kluczowe Pytania do Dostawców</h3>
+                         <p class="mb-6 text-gray-700" data-translate="strat_questions_intro">Dobrze przygotowana rozmowa z potencjalnym dostawcą to podstawa. Poniższa lista zawiera kluczowe pytania, które powinieneś zadać, aby uniknąć nieporozumień i ukrytych kosztów. Użyj jej jako checklisty podczas kontaktu telefonicznego lub mailowego.</p>
+                         <ul class="space-y-4 list-inside">
+                             <li class="flex items-start"><span class="text-green-600 mr-2 font-bold">✔</span> <div data-translate="strat_q1"><span class="font-semibold">Certyfikaty i klasa drewna:</span> Czy drewno posiada certyfikat (np. CE) i jaka jest jego klasa wytrzymałości (np. C24)?</div></li>
+                             <li class="flex items-start"><span class="text-green-600 mr-2 font-bold">✔</span> <div data-translate="strat_q2"><span class="font-semibold">Wilgotność i metoda suszenia:</span> Jaka jest wilgotność drewna (optymalnie 15-18%) i czy jest suszone komorowo?</div></li>
+                             <li class="flex items-start"><span class="text-green-600 mr-2 font-bold">✔</span> <div data-translate="strat_q3"><span class="font-semibold">Cena i co zawiera:</span> Czy podana cena za m³ jest ceną netto czy brutto? Czy obejmuje struganie, fazowanie krawędzi i wykonanie zamków?</div></li>
+                             <li class="flex items-start"><span class="text-green-600 mr-2 font-bold">✔</span> <div data-translate="strat_q4"><span class="font-semibold">Dostępność i termin realizacji:</span> Jaki jest przewidywany czas oczekiwania na przygotowanie kompletnego zamówienia?</div></li>
+                             <li class="flex items-start"><span class="text-green-600 mr-2 font-bold">✔</span> <div data-translate="strat_q5"><span class="font-semibold">Logistyka i koszt transportu:</span> Czy firma oferuje transport do Jaworka (pow. kłodzki)? Jaki jest koszt i rodzaj transportu (np. HDS)?</div></li>
+                             <li class="flex items-start"><span class="text-green-600 mr-2 font-bold">✔</span> <div data-translate="strat_q6"><span class="font-semibold">Warunki płatności:</span> Jaka jest wysokość wymaganej zaliczki i jakie są warunki płatności końcowej?</div></li>
+                         </ul>
+                     </div>
+                      <div class="card p-6 sm:p-8">
+                        <h3 class="text-2xl font-bold mb-4" data-translate="strat_suppliers_title">Dostawcy Materiałów Drewnianych</h3>
+                         <p class="mb-6 text-gray-700" data-translate="strat_suppliers_intro">Poniżej znajduje się lista przykładowych, renomowanych dostawców drewna konstrukcyjnego i domów z bali, ze szczególnym uwzględnieniem południowej Polski. Lista ma charakter orientacyjny i stanowi punkt wyjścia do dalszych poszukiwań. Warto filtrować po województwie, aby znaleźć firmy najbliżej lokalizacji budowy, co może obniżyć koszty transportu.</p>
+                        <div class="mb-4">
+                            <label for="region-filter" class="mr-2 font-semibold" data-translate="strat_suppliers_filter">Filtruj wg województwa:</label>
+                            <select id="region-filter" class="p-2 border rounded-md">
+                                <option value="all" data-translate="region_all">Wszystkie</option>
+                                <option value="dolnośląskie" data-translate="region_dolno">Dolnośląskie</option>
+                                <option value="małopolskie" data-translate="region_malo">Małopolskie</option>
+                                <option value="śląskie" data-translate="region_slas">Śląskie</option>
+                                <option value="opolskie" data-translate="region_opol">Opolskie</option>
+                                <option value="inne" data-translate="region_inne">Inne</option>
+                            </select>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-3 font-semibold" data-translate="table_supplier">Dostawca</th>
+                                        <th class="p-3 font-semibold" data-translate="table_location">Lokalizacja (Województwo)</th>
+                                        <th class="p-3 font-semibold" data-translate="table_specialty">Specjalizacja</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="supplier-table">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const translations = {
+        pl: {
+            main_title: "Interaktywny Przewodnik Budowlany",
+            main_subtitle: "Optymalizacja kosztów budowy dwóch domków letniskowych w Jaworku",
+            nav_start: "Start",
+            nav_materials: "Analiza Materiałów",
+            nav_costs: "Kalkulator Kosztów",
+            nav_strategy: "Strategia i Harmonogram",
+            start_title: "Witaj w Analizie Twojego Projektu!",
+            start_intro: "Ta aplikacja to interaktywny przewodnik, który pomoże Ci zrozumieć rynek materiałów budowlanych i podjąć najlepsze decyzje przy budowie dwóch całorocznych domków z bali w standardzie \"off-grid\". Znajdziesz tu analizę drewna konstrukcyjnego, pokryć dachowych, listę potencjalnych dostawców oraz dynamiczny kalkulator kosztów. Celem jest znalezienie optymalnego stosunku jakości do ceny, aby Twój projekt został zrealizowany z sukcesem wiosną 2026 roku.",
+            start_loc_title: "Lokalizacja",
+            start_loc_region: "(woj. dolnośląskie)",
+            start_obj_title: "Obiekt",
+            start_obj_desc: "2x Domek z bali 35m²",
+            start_obj_type: "(parterowy, całoroczny)",
+            start_plan_title: "Wymogi MPZP",
+            start_plan_desc: "Dach stromy 30-50°",
+            start_plan_color: "(czerwony lub szary)",
+            mat_title: "Analiza Rynku Materiałów",
+            mat_subtitle: "Porównaj dostępne opcje drewna i pokryć dachowych, aby dokonać najlepszego wyboru.",
+            mat_logs_title: "1. Bale Zewnętrzne (Ściany Konstrukcyjne)",
+            mat_logs_intro: "W tej sekcji analizujemy kluczowy element konstrukcyjny Twoich domków – bale kwadratowe. Znajdziesz tu szacunkową ilość potrzebnego materiału, porównanie gatunków drewna pod kątem ceny, trwałości i właściwości, a także rekomendacje dotyczące technologii i grubości bali. Wszystko to, by zapewnić optymalną izolację i wytrzymałość konstrukcji przez cały rok.",
+            mat_logs_amount_title: "Szacowana Ilość Bali",
+            mat_logs_amount_desc: "dla dwóch domków (ściany zewn.)",
+            mat_logs_thick_title: "Rekomendowana Grubość",
+            mat_logs_thick_desc: "optymalna dla domku całorocznego",
+            mat_logs_tech_title: "Rekomendowana Technologia",
+            mat_logs_tech_desc1: "Suszone Komorowo, Lite lub Klejone (KVH)",
+            mat_logs_tech_desc2: "zapewnia stabilność wymiarową",
+            mat_wood_comp_title: "Porównanie Gatunków Drewna",
+            mat_wood_all: "Wszystkie",
+            mat_wood_spruce: "Świerk",
+            mat_wood_pine: "Sosna",
+            mat_wood_larch: "Modrzew",
+            wood_details_default_title: "Wybierz gatunek, aby zobaczyć szczegóły",
+            wood_details_default_text: "Kliknij na przyciski powyżej, aby porównać właściwości najpopularniejszych gatunków drewna konstrukcyjnego dostępnych w Polsce. Analiza uwzględnia cenę, trwałość, łatwość obróbki i właściwości izolacyjne.",
+            wood_details_swierk_title: "Świerk",
+            wood_details_swierk_text: "Najpopularniejszy i najbardziej ekonomiczny wybór. Dobra izolacyjność i łatwość obróbki. Wymaga solidnej impregnacji, aby zapewnić trwałość. Idealny stosunek ceny do jakości dla tego typu projektu.",
+            wood_details_sosna_title: "Sosna",
+            wood_details_sosna_text: "Nieco droższa od świerku, ale bardziej wytrzymała i odporna na warunki atmosferyczne dzięki większej zawartości żywicy. Ma cieplejszy, bardziej wyrazisty kolor. Dobry kompromis między ceną a trwałością.",
+            wood_details_modrzew_title: "Modrzew",
+            wood_details_modrzew_text: "Najtrwalsza i najdroższa z prezentowanych opcji. Drewno modrzewiowe jest bardzo odporne na wilgoć i szkodniki, może być stosowane nawet bez impregnacji. To wybór premium, gwarantujący długowieczność.",
+            mat_part_title: "2. Drewno na Ścianki Działowe",
+            mat_part_intro: "Aby zachować spójność wizualną wnętrza, ścianki działowe powinny mieć przekrój zbliżony do bali zewnętrznych. Nie muszą to być jednak pełne bale. Poniżej przedstawiamy bardziej ekonomiczne, a równie estetyczne rozwiązanie.",
+            mat_part_rec_mat: "Rekomendowany Materiał:",
+            mat_part_rec_mat_desc1: "Kantówka Strugana / Drewno Klejone (KVH)",
+            mat_part_rec_mat_desc2: "Przekrój: np. 140x80mm",
+            mat_part_desc: "Użycie kantówki struganej lub drewna klejonego KVH jest znacznie tańsze niż litych bali, a pozwala na uzyskanie gładkiej, estetycznej powierzchni ściany o pożądanym wyglądzie. Materiał ten jest zazwyczaj dostępny u tych samych dostawców, co bale konstrukcyjne.",
+            mat_part_cost_title: "Szacowany Koszt:",
+            mat_roof_title: "3. Analiza Pokryć Dachowych",
+            mat_roof_intro: "Zgodnie z wymogami MPZP, dach musi być pokryty materiałem w odcieniach czerwieni lub szarości, imitującym dachówkę. Poniżej porównujemy trzy popularne, lekkie i estetyczne alternatywy dla ciężkiej dachówki ceramicznej, idealne dla konstrukcji drewnianej. Interaktywny wykres pomoże Ci zwizualizować, która opcja najlepiej spełnia Twoje priorytety.",
+            roof_details_default_title: "Porównanie pokryć dachowych",
+            roof_details_default_text: "Wykres radarowy przedstawia porównanie trzech typów pokryć dachowych w pięciu kluczowych kategoriach. Im dalej od środka znajduje się punkt na danej osi, tym lepsza ocena w tej kategorii. Kliknij na nazwę materiału w legendzie wykresu, aby go ukryć lub pokazać, co ułatwi porównanie.",
+            costs_title: "Interaktywny Kalkulator Kosztów",
+            costs_subtitle: "Sprawdź, jak Twoje decyzje materiałowe wpływają na szacunkowy budżet.",
+            costs_intro: "To narzędzie pozwala na dynamiczne oszacowanie łącznych kosztów materiałowych dla obu domków. Wybierz preferowane opcje dla drewna konstrukcyjnego i pokrycia dachowego. Kalkulator na bieżąco przeliczy całkowity koszt, pokazując, jak poszczególne wybory przekładają się na finalny budżet. To potężne narzędzie do planowania i optymalizacji wydatków.",
+            costs_selections_title: "1. Wybierz Materiały",
+            costs_wood_species_label: "Gatunek drewna:",
+            wood_spruce: "Świerk",
+            wood_pine: "Sosna",
+            wood_larch: "Modrzew",
+            costs_wood_thick_label: "Grubość bala:",
+            costs_roof_type_label: "Rodzaj pokrycia dachowego:",
+            roof_shingles: "Gont Bitumiczny",
+            roof_metal: "Blachodachówka",
+            roof_composite: "Płyta Kompozytowa",
+            costs_custom_prices_title: "2. Dostosuj Ceny (Oferta Własna)",
+            costs_custom_prices_intro: "Wprowadź ceny z otrzymanej oferty, aby uzyskać dokładniejsze obliczenia. Ceny podaj w PLN.",
+            costs_custom_wood_title: "Ceny drewna (za m³)",
+            costs_custom_roof_title: "Ceny pokrycia (za m²)",
+            costs_custom_partition_title: "Cena ścianek działowych (za m³)",
+            costs_reset_btn: "Przywróć Domyślne",
+            costs_summary_title: "Szacowany Łączny Koszt",
+            costs_summary_logs: "Bale zewnętrzne:",
+            costs_summary_partitions: "Ścianki działowe:",
+            costs_summary_roof: "Pokrycie dachu:",
+            costs_summary_total: "SUMA:",
+            costs_gbp_rate_note: "Przeliczono po kursie 1 GBP = 5.15 PLN.",
+            costs_summary_disclaimer: "*Koszty szacunkowe, nie stanowią oferty handlowej. Obejmują materiał na dwa domki.",
+            strat_title: "Strategia Zakupowa i Harmonogram",
+            strat_subtitle: "Zaplanuj swoje działania, aby zoptymalizować koszty i uniknąć opóźnień.",
+            strat_timeline_title: "Harmonogram Działań do Wiosny 2026",
+            strat_timeline_intro: "Prawidłowe rozplanowanie działań w czasie jest kluczowe dla powodzenia projektu. Poniższa oś czasu przedstawia sugerowany harmonogram, który pozwoli na spokojne zebranie ofert, zamówienie materiałów i przygotowanie się do startu budowy. Wczesne zamówienie drewna (jesienią/zimą) może przynieść korzyści cenowe i gwarancję dostępności.",
+            strat_timeline1_title: "Lato / Jesień 2025: Finalizacja Projektu i Zbieranie Ofert",
+            strat_timeline1_desc: "Doprecyzuj projekt domków. Rozpocznij kontakt z wyselekcjonowanymi dostawcami. Zadaj kluczowe pytania i zbierz szczegółowe oferty.",
+            strat_timeline2_title: "Jesień / Zima 2025: Wybór Dostawcy i Zamówienie Materiałów",
+            strat_timeline2_desc: "To najlepszy moment na zamówienie drewna. Ceny mogą być niższe, a tartaki mają więcej czasu na przygotowanie materiału. Podpisz umowę i wpłać zaliczkę.",
+            strat_timeline3_title: "Wczesna Wiosna 2026: Zgłoszenie Budowy i Logistyka",
+            strat_timeline3_desc: "Złóż zgłoszenie budowy w starostwie powiatowym. Ustal z dostawcą dokładny termin i szczegóły transportu materiałów do Jaworka.",
+            strat_timeline4_title: "Późna Wiosna 2026: Dostawa Materiałów i Start Budowy",
+            strat_timeline4_desc: "Po upływie 21 dni od zgłoszenia i przy braku sprzeciwu urzędu, możesz rozpocząć budowę!",
+            strat_questions_title: "Kluczowe Pytania do Dostawców",
+            strat_questions_intro: "Dobrze przygotowana rozmowa z potencjalnym dostawcą to podstawa. Poniższa lista zawiera kluczowe pytania, które powinieneś zadać, aby uniknąć nieporozumień i ukrytych kosztów. Użyj jej jako checklisty podczas kontaktu telefonicznego lub mailowego.",
+            strat_q1: '<span class="font-semibold">Certyfikaty i klasa drewna:</span> Czy drewno posiada certyfikat (np. CE) i jaka jest jego klasa wytrzymałości (np. C24)?',
+            strat_q2: '<span class="font-semibold">Wilgotność i metoda suszenia:</span> Jaka jest wilgotność drewna (optymalnie 15-18%) i czy jest suszone komorowo?',
+            strat_q3: '<span class="font-semibold">Cena i co zawiera:</span> Czy podana cena za m³ jest ceną netto czy brutto? Czy obejmuje struganie, fazowanie krawędzi i wykonanie zamków?',
+            strat_q4: '<span class="font-semibold">Dostępność i termin realizacji:</span> Jaki jest przewidywany czas oczekiwania na przygotowanie kompletnego zamówienia?',
+            strat_q5: '<span class="font-semibold">Logistyka i koszt transportu:</span> Czy firma oferuje transport do Jaworka (pow. kłodzki)? Jaki jest koszt i rodzaj transportu (np. HDS)?',
+            strat_q6: '<span class="font-semibold">Warunki płatności:</span> Jaka jest wysokość wymaganej zaliczki i jakie są warunki płatności końcowej?',
+            strat_suppliers_title: "Dostawcy Materiałów Drewnianych",
+            strat_suppliers_intro: "Poniżej znajduje się lista przykładowych, renomowanych dostawców drewna konstrukcyjnego i domów z bali, ze szczególnym uwzględnieniem południowej Polski. Lista ma charakter orientacyjny i stanowi punkt wyjścia do dalszych poszukiwań. Warto filtrować po województwie, aby znaleźć firmy najbliżej lokalizacji budowy, co może obniżyć koszty transportu.",
+            strat_suppliers_filter: "Filtruj wg województwa:",
+            region_all: "Wszystkie",
+            region_dolno: "Dolnośląskie",
+            region_malo: "Małopolskie",
+            region_slas: "Śląskie",
+            region_opol: "Opolskie",
+            region_inne: "Inne",
+            table_supplier: "Dostawca",
+            table_location: "Lokalizacja (Województwo)",
+            table_specialty: "Specjalizacja",
+            wood_chart_price_label: "Cena (min. PLN/m³)",
+            wood_chart_durability_label: "Trwałość (w skali 1-10)",
+            roof_chart_price_label: "Cena (niska = lepiej)",
+            roof_chart_weight_label: "Waga (niska = lepiej)",
+            roof_chart_durability_label: "Trwałość",
+            roof_chart_aesthetics_label: "Estetyka",
+            roof_chart_diy_label: "Łatwość Montażu (DIY)",
+            roof_chart_metal_label: "Blachodachówka Matowa",
+            roof_chart_shingles_label: "Gont Bitumiczny (imitacja)",
+            roof_chart_composite_label: "Płyta Kompozytowa",
+
+        },
+        en: {
+            main_title: "A Proper Interactive Buildin' Guide",
+            main_subtitle: "Sortin' out the costs for two holiday cabins in Jaworek",
+            nav_start: "Get Started",
+            nav_materials: "Materials Analysis",
+            nav_costs: "Cost Calculator",
+            nav_strategy: "Strategy & Timeline",
+            start_title: "Alright, Let's Get Crackin' on Yer Project!",
+            start_intro: "This 'ere app is a proper handy guide to help you get yer head around the buildin' materials market and make smart choices for yer two all-year-round log cabins, built all off-grid like. You'll find a breakdown of timber, roofin', a list of potential suppliers, and a dynamic cost calculator. The aim is to get you the best bang for yer buck, so yer project's a grand success come Spring 2026.",
+            start_loc_title: "Location",
+            start_loc_region: "(Lower Silesia voivodeship)",
+            start_obj_title: "The Job",
+            start_obj_desc: "2x 35m² Log Cabins",
+            start_obj_type: "(single-storey, all-year)",
+            start_plan_title: "Council Rules",
+            start_plan_desc: "Pitched roof 30-50°",
+            start_plan_color: "(red or grey)",
+            mat_title: "Materials Market Analysis",
+            mat_subtitle: "Compare the options for timber and roofin' to make the best choice.",
+            mat_logs_title: "1. External Logs (Structural Walls)",
+            mat_logs_intro: "In this bit, we're lookin' at the main buildin' block of yer cabins – the square logs. You'll find an estimate of how much you'll need, a comparison of wood types for price, durability, and features, plus recommendations on technology and log thickness. All to make sure yer cabins are snug and sturdy all year round.",
+            mat_logs_amount_title: "Estimated Log Quantity",
+            mat_logs_amount_desc: "for two cabins (external walls)",
+            mat_logs_thick_title: "Recommended Thickness",
+            mat_logs_thick_desc: "optimal for an all-year cabin",
+            mat_logs_tech_title: "Recommended Technology",
+            mat_logs_tech_desc1: "Kiln-Dried, Solid or Glued (KVH)",
+            mat_logs_tech_desc2: "ensures dimensional stability",
+            mat_wood_comp_title: "Wood Species Comparison",
+            mat_wood_all: "All",
+            mat_wood_spruce: "Spruce",
+            mat_wood_pine: "Pine",
+            mat_wood_larch: "Larch",
+            wood_details_default_title: "Pick a wood to see the details",
+            wood_details_default_text: "Click the buttons above to compare the features of the most popular structural timbers available in Poland. The analysis covers price, durability, ease of workin', and insulation properties.",
+            wood_details_swierk_title: "Spruce",
+            wood_details_swierk_text: "The most popular and cheapest option. Good insulation and easy to work with. Needs a proper good treatment to last. The best value for money for this kind of job.",
+            wood_details_sosna_title: "Pine",
+            wood_details_sosna_text: "A bit pricier than spruce, but tougher and more weather-resistant 'cause of more resin. Has a warmer, more distinct look. A good compromise between price and durability.",
+            wood_details_modrzew_title: "Larch",
+            wood_details_modrzew_text: "The toughest and most expensive of the lot. Larch wood is naturally resistant to damp and pests, you could even use it without treatment. It's a premium choice that'll last a lifetime.",
+            mat_part_title: "2. Timber for Partition Walls",
+            mat_part_intro: "To keep the inside lookin' consistent, the partition walls should have a similar profile to the external logs. But they don't need to be solid logs. Here's a cheaper, but just as smart-lookin' solution.",
+            mat_part_rec_mat: "Recommended Material:",
+            mat_part_rec_mat_desc1: "Planed Timber / Glued Laminated Timber (KVH)",
+            mat_part_rec_mat_desc2: "Profile: e.g. 140x80mm",
+            mat_part_desc: "Usin' planed timber or KVH is much cheaper than solid logs, and it gives you a smooth, smart-lookin' wall with the right appearance. You can usually get this stuff from the same suppliers as the structural logs.",
+            mat_part_cost_title: "Estimated Cost:",
+            mat_roof_title: "3. Roofing Analysis",
+            mat_roof_intro: "As per the local plan, the roof must be covered with a material in shades of red or grey that looks like a ceramic tile. Here, we compare three popular, lightweight, and good-lookin' alternatives to heavy ceramic tiles, perfect for a timber structure. The interactive chart will help you see which option best fits yer priorities.",
+            roof_details_default_title: "Roofing Comparison",
+            roof_details_default_text: "The radar chart shows a comparison of three roofin' types across five key categories. The further a point is from the centre on an axis, the better the rating in that category. Click on a material name in the legend to show or hide it for easier comparison.",
+            costs_title: "Interactive Cost Calculator",
+            costs_subtitle: "See how yer material choices affect the estimated budget.",
+            costs_intro: "This tool lets you dynamically estimate the total material costs for both cabins. Choose yer preferred options for the structural timber and roofin'. The calculator will update the total cost in real-time, showin' how each choice affects the final budget. It's a powerful tool for plannin' and optimisin' yer spendin'.",
+            costs_selections_title: "1. Pick Yer Materials",
+            costs_wood_species_label: "Wood Type:",
+            wood_spruce: "Spruce",
+            wood_pine: "Pine",
+            wood_larch: "Larch",
+            costs_wood_thick_label: "Log Thickness:",
+            costs_roof_type_label: "Roofin' Type:",
+            roof_shingles: "Bitumen Shingles",
+            roof_metal: "Metal Roofing",
+            roof_composite: "Composite Tile",
+            costs_custom_prices_title: "2. Adjust Prices (Yer Own Quote)",
+            costs_custom_prices_intro: "Enter the prices from a quote you've received for a more accurate calculation. Prices should be in PLN.",
+            costs_custom_wood_title: "Timber Prices (per m³)",
+            costs_custom_roof_title: "Roofin' Prices (per m²)",
+            costs_custom_partition_title: "Partition Wall Price (per m³)",
+            costs_reset_btn: "Reset to Defaults",
+            costs_summary_title: "Estimated Total Cost",
+            costs_summary_logs: "External logs:",
+            costs_summary_partitions: "Partition walls:",
+            costs_summary_roof: "Roofing:",
+            costs_summary_total: "TOTAL:",
+            costs_gbp_rate_note: "Converted at a rate of 1 GBP = 5.15 PLN.",
+            costs_summary_disclaimer: "*Costs are estimates, not a commercial offer. They cover materials for two cabins.",
+            strat_title: "Purchasing Strategy & Timeline",
+            strat_subtitle: "Plan yer moves to optimise costs and avoid delays.",
+            strat_timeline_title: "Action Plan until Spring 2026",
+            strat_timeline_intro: "Plannin' yer actions over time is key to the project's success. The timeline below suggests a schedule that will allow for a relaxed collection of quotes, orderin' materials, and preparin' for the build to start. Orderin' timber early (in autumn/winter) can bring price benefits and guarantee availability.",
+            strat_timeline1_title: "Summer / Autumn 2025: Finalise Design & Get Quotes",
+            strat_timeline1_desc: "Nail down the cabin design. Start chattin' to selected suppliers. Ask the key questions and get detailed quotes.",
+            strat_timeline2_title: "Autumn / Winter 2025: Choose Supplier & Order Materials",
+            strat_timeline2_desc: "This is the best time to order the wood. Prices might be lower, and sawmills have more time to prepare the material. Sign the contract and pay a deposit.",
+            strat_timeline3_title: "Early Spring 2026: Building Notice & Logistics",
+            strat_timeline3_desc: "Submit the buildin' notice to the district office. Arrange the exact date and details of material transport to Jaworek with the supplier.",
+            strat_timeline4_title: "Late Spring 2026: Materials Delivery & Start of Construction",
+            strat_timeline4_desc: "After 21 days from the notice with no objection from the council, you can start buildin'!",
+            strat_questions_title: "Key Questions for Suppliers",
+            strat_questions_intro: "A well-prepared chat with a potential supplier is essential. The list below contains key questions you should ask to avoid misunderstandings and hidden costs. Use it as a checklist when you call or email.",
+            strat_q1: '<span class="font-semibold">Certificates and timber grade:</span> Does the timber have a certificate (e.g., CE) and what is its strength grade (e.g., C24)?',
+            strat_q2: '<span class="font-semibold">Moisture content and drying method:</span> What is the moisture content of the wood (ideally 15-18%) and is it kiln-dried?',
+            strat_q3: '<span class="font-semibold">Price and what it includes:</span> Is the price per m³ net or gross? Does it include planing, chamfering, and cutting the joints?',
+            strat_q4: '<span class="font-semibold">Availability and lead time:</span> What is the expected waiting time for a complete order to be prepared?',
+            strat_q5: '<span class="font-semibold">Logistics and transport cost:</span> Does the company offer transport to Jaworek? What is the cost and type of transport (e.g., with a crane)?',
+            strat_q6: '<span class="font-semibold">Payment terms:</span> What is the required deposit amount and what are the final payment terms?',
+            strat_suppliers_title: "Timber Suppliers",
+            strat_suppliers_intro: "Below is a list of sample, reputable suppliers of structural timber and log homes, with a focus on southern Poland. This list is for guidance and a starting point for further research. It's worth filterin' by region to find companies closest to the build site, which can lower transport costs.",
+            strat_suppliers_filter: "Filter by region:",
+            region_all: "All",
+            region_dolno: "Lower Silesia",
+            region_malo: "Lesser Poland",
+            region_slas: "Silesia",
+            region_opol: "Opole",
+            region_inne: "Other",
+            table_supplier: "Supplier",
+            table_location: "Location (Region)",
+            table_specialty: "Specialty",
+            wood_chart_price_label: "Price (min. PLN/m³)",
+            wood_chart_durability_label: "Durability (scale 1-10)",
+            roof_chart_price_label: "Price (low = better)",
+            roof_chart_weight_label: "Weight (low = better)",
+            roof_chart_durability_label: "Durability",
+            roof_chart_aesthetics_label: "Aesthetics",
+            roof_chart_diy_label: "Ease of Assembly (DIY)",
+            roof_chart_metal_label: "Matte Metal Roofing",
+            roof_chart_shingles_label: "Bitumen Shingles (imitation)",
+            roof_chart_composite_label: "Composite Tile",
+        }
+    };
+
+    const navButtons = document.querySelectorAll('.nav-button');
+    const sections = document.querySelectorAll('.section');
+    const langPlButton = document.getElementById('lang-pl');
+    const langEnButton = document.getElementById('lang-en');
+    let currentLang = localStorage.getItem('lang') || 'pl';
+    const GBP_RATE = 5.15;
+    
+    function setLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem('lang', lang);
+        
+        document.documentElement.lang = lang;
+        langPlButton.classList.toggle('active', lang === 'pl');
+        langEnButton.classList.toggle('active', lang === 'en');
+
+        document.querySelectorAll('[data-translate]').forEach(el => {
+            const key = el.dataset.translate;
+            if (translations[lang][key]) {
+                el.innerHTML = translations[lang][key];
+            }
+        });
+        
+        updateWoodDetails(document.querySelector('[data-wood].active').dataset.wood);
+        updateRoofingDetails();
+        renderWoodChart(document.querySelector('[data-wood].active').dataset.wood);
+        renderRoofingChart();
+        populateSuppliers(document.getElementById('region-filter').value);
+    }
+
+    langPlButton.addEventListener('click', () => setLanguage('pl'));
+    langEnButton.addEventListener('click', () => setLanguage('en'));
+
+    const woodData = {
+        swierk: { durability: 6 },
+        sosna: { durability: 7 },
+        modrzew: { durability: 9 }
+    };
+    
+    const suppliers = [
+        { name: 'Domy z Bali "Bieszczady"', region: 'małopolskie', specialty: 'Domy z bali, drewno konstrukcyjne' },
+        { name: 'Tartak "Podgórze" S.C.', region: 'dolnośląskie', specialty: 'Tarcica, bale, drewno KVH' },
+        { name: 'Andrewex - Domy Drewniane', region: 'śląskie', specialty: 'Domy z bali, drewno klejone' },
+        { name: 'Tartak "Olczyk"', region: 'opolskie', specialty: 'Drewno budowlane, tarcica' },
+        { name: 'Drew-Trans', region: 'małopolskie', specialty: 'Kompleksowe zaopatrzenie w drewno' },
+        { name: 'Strug-Bud', region: 'dolnośląskie', specialty: 'Bale toczone i kwadratowe' },
+        { name: 'Goral-Bud - Domy z Gór', region: 'małopolskie', specialty: 'Tradycyjne domy z bali płazów' },
+        { name: 'Wood-Source Polska', region: 'inne', specialty: 'Dystrybutor drewna skandynawskiego' },
+    ];
+    
+    const woodDetailsPanel = document.getElementById('wood-details');
+    const woodFilterButtons = document.querySelectorAll('[data-wood]');
+    const roofingDetailsPanel = document.getElementById('roofing-details');
+
+    function updateWoodDetails(woodType) {
+        if (woodType === 'all') {
+            woodDetailsPanel.innerHTML = `<h5 class="text-lg font-bold mb-2">${translations[currentLang].wood_details_default_title}</h5><p>${translations[currentLang].wood_details_default_text}</p>`;
+        } else {
+            const titleKey = `wood_details_${woodType}_title`;
+            const textKey = `wood_details_${woodType}_text`;
+            const colorClass = woodType === 'swierk' ? 'text-green-800' : (woodType === 'sosna' ? 'text-blue-800' : 'text-red-800');
+            woodDetailsPanel.innerHTML = `<h5 class="text-lg font-bold mb-2 ${colorClass}">${translations[currentLang][titleKey]}</h5><p>${translations[currentLang][textKey]}</p>`;
+        }
+    }
+    
+    function updateRoofingDetails() {
+        roofingDetailsPanel.innerHTML = `<h5 class="text-lg font-bold mb-2">${translations[currentLang].roof_details_default_title}</h5><p>${translations[currentLang].roof_details_default_text}</p>`;
+    }
+
+    let woodChart;
+    function renderWoodChart(highlight = 'all') {
+        const ctx = document.getElementById('woodComparisonChart').getContext('2d');
+        const prices = { pl: { swierk: [1600, 1900], sosna: [1800, 2200], modrzew: [2500, 3200] }, en: { swierk: [1600, 1900], sosna: [1800, 2200], modrzew: [2500, 3200] } };
+        const data = {
+            labels: [translations[currentLang].mat_wood_spruce, translations[currentLang].mat_wood_pine, translations[currentLang].mat_wood_larch],
+            datasets: [
+                {
+                    label: translations[currentLang].wood_chart_price_label,
+                    data: Object.values(prices[currentLang]).map(p => p[0]),
+                    backgroundColor: Object.keys(prices.pl).map(k => highlight === 'all' || highlight === k ? 'rgba(217, 119, 6, 0.6)' : 'rgba(217, 119, 6, 0.2)'),
+                    borderColor: Object.keys(prices.pl).map(k => highlight === 'all' || highlight === k ? 'rgba(217, 119, 6, 1)' : 'rgba(217, 119, 6, 0.4)'),
+                    borderWidth: 1
+                },
+                {
+                    label: translations[currentLang].wood_chart_durability_label,
+                    data: Object.values(woodData).map(w => w.durability),
+                    backgroundColor: Object.keys(prices.pl).map(k => highlight === 'all' || highlight === k ? 'rgba(22, 163, 74, 0.6)' : 'rgba(22, 163, 74, 0.2)'),
+                    borderColor: Object.keys(prices.pl).map(k => highlight === 'all' || highlight === k ? 'rgba(22, 163, 74, 1)' : 'rgba(22, 163, 74, 0.4)'),
+                    borderWidth: 1
+                }
+            ]
+        };
+
+        if (woodChart) {
+            woodChart.destroy();
+        }
+
+        woodChart = new Chart(ctx, {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label.includes(translations[currentLang].wood_chart_price_label.substring(0,4))) {
+                                    const woodKey = Object.keys(prices.pl)[context.dataIndex];
+                                    const priceRange = prices[currentLang][woodKey];
+                                    return `${label}: ${priceRange[0]} - ${priceRange[1]} PLN`;
+                                }
+                                return `${label}: ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    woodFilterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelector('[data-wood].active').classList.remove('active');
+            button.classList.add('active');
+            const woodType = button.dataset.wood;
+            renderWoodChart(woodType);
+            updateWoodDetails(woodType);
+        });
+    });
+
+    let roofingChart;
+    function renderRoofingChart() {
+        const ctx = document.getElementById('roofingRadarChart').getContext('2d');
+        const roofingData = {
+            labels: [
+                translations[currentLang].roof_chart_price_label, 
+                translations[currentLang].roof_chart_weight_label, 
+                translations[currentLang].roof_chart_durability_label, 
+                translations[currentLang].roof_chart_aesthetics_label, 
+                translations[currentLang].roof_chart_diy_label
+            ],
+            datasets: [
+                {
+                    label: translations[currentLang].roof_chart_metal_label,
+                    data: [7, 9, 7, 7, 8],
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                },
+                {
+                    label: translations[currentLang].roof_chart_shingles_label,
+                    data: [9, 8, 6, 6, 9],
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                },
+                {
+                    label: translations[currentLang].roof_chart_composite_label,
+                    data: [4, 7, 9, 9, 6],
+                    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                }
+            ]
+        };
+        
+        if (roofingChart) {
+            roofingChart.destroy();
+        }
+        
+        roofingChart = new Chart(ctx, {
+            type: 'radar',
+            data: roofingData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                 scales: {
+                    r: {
+                        angleLines: { display: false },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        pointLabels: { font: { size: 11 } }
+                    }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+    }
+
+    const supplierTableBody = document.getElementById('supplier-table');
+    const regionFilter = document.getElementById('region-filter');
+    
+    function populateSuppliers(filter = 'all') {
+        supplierTableBody.innerHTML = '';
+        const filteredSuppliers = (filter === 'all') ? suppliers : suppliers.filter(s => s.region === filter);
+        
+        filteredSuppliers.forEach(s => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            const regionKey = s.region === 'dolnośląskie' ? 'region_dolno' : s.region === 'małopolskie' ? 'region_malo' : s.region === 'śląskie' ? 'region_slas' : s.region === 'opolskie' ? 'region_opol' : 'region_inne';
+            row.innerHTML = `
+                <td class="p-3">${s.name}</td>
+                <td class="p-3 capitalize">${translations[currentLang][regionKey]}</td>
+                <td class="p-3">${s.specialty}</td>
+            `;
+            supplierTableBody.appendChild(row);
+        });
+    }
+
+    regionFilter.addEventListener('change', () => {
+        populateSuppliers(regionFilter.value);
+    });
+
+    // Cost Calculator Logic
+    const costWoodEl = document.getElementById('cost-wood');
+    const costPartitionsEl = document.getElementById('cost-partitions');
+    const costRoofEl = document.getElementById('cost-roof');
+    const totalCostEl = document.getElementById('total-cost');
+    const totalCostSumEl = document.getElementById('cost-total-sum');
+    
+    const costWoodGbpEl = document.getElementById('cost-wood-gbp');
+    const costPartitionsGbpEl = document.getElementById('cost-partitions-gbp');
+    const costRoofGbpEl = document.getElementById('cost-roof-gbp');
+    const totalCostGbpEl = document.getElementById('total-cost-gbp');
+    const totalCostSumGbpEl = document.getElementById('cost-total-sum-gbp');
+
+    const priceInputs = {
+        swierk: document.getElementById('price_swierk'),
+        sosna: document.getElementById('price_sosna'),
+        modrzew: document.getElementById('price_modrzew'),
+        gont: document.getElementById('price_gont'),
+        blachodachowka: document.getElementById('price_blachodachowka'),
+        kompozyt: document.getElementById('price_kompozyt'),
+        partitions: document.getElementById('price_partitions')
+    };
+
+    const defaultPrices = {
+        swierk: 1750,
+        sosna: 2000,
+        modrzew: 2800,
+        gont: 55,
+        blachodachowka: 75,
+        kompozyt: 120,
+        partitions: 1600
+    };
+
+    const costQuantities = {
+        thickness: {
+            t120: { m3: 18, priceMultiplier: 1.0 },
+            t140: { m3: 20, priceMultiplier: 1.15 },
+            t160: { m3: 22, priceMultiplier: 1.3 }
+        },
+        roof: { m2: 100 },
+        partitions: { m3: 3 }
+    };
+
+    function populatePriceForm() {
+        for (const key in defaultPrices) {
+            priceInputs[key].value = defaultPrices[key];
+        }
+    }
+
+    function calculateCosts() {
+        const selectedSpecies = document.querySelector('input[name="wood_species"]:checked').value;
+        const selectedThickness = document.querySelector('input[name="wood_thickness"]:checked').value;
+        const selectedRoof = document.querySelector('input[name="roof_type"]:checked').value;
+
+        const woodThicknessData = costQuantities.thickness[selectedThickness];
+        
+        const partitionsPrice = parseFloat(priceInputs.partitions.value) || 0;
+        const partitionsCost = partitionsPrice * costQuantities.partitions.m3;
+        
+        const baseWoodPrice = parseFloat(priceInputs[selectedSpecies].value) || 0;
+        const finalWoodPricePerM3 = baseWoodPrice * woodThicknessData.priceMultiplier;
+        const woodCost = finalWoodPricePerM3 * woodThicknessData.m3;
+        
+        const roofPrice = parseFloat(priceInputs[selectedRoof].value) || 0;
+        const roofCost = roofPrice * costQuantities.roof.m2;
+
+        const totalCost = woodCost + roofCost + partitionsCost;
+
+        const formatPLN = (val) => `${val.toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2})} PLN`;
+        const formatGBP = (val) => `~ £${(val / GBP_RATE).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+        costWoodEl.textContent = formatPLN(woodCost);
+        costPartitionsEl.textContent = formatPLN(partitionsCost);
+        costRoofEl.textContent = formatPLN(roofCost);
+        totalCostEl.textContent = formatPLN(totalCost);
+        totalCostSumEl.textContent = formatPLN(totalCost);
+
+        costWoodGbpEl.textContent = formatGBP(woodCost);
+        costPartitionsGbpEl.textContent = formatGBP(partitionsCost);
+        costRoofGbpEl.textContent = formatGBP(roofCost);
+        totalCostGbpEl.textContent = formatGBP(totalCost);
+        totalCostSumGbpEl.textContent = formatGBP(totalCost);
+    }
+
+    document.querySelectorAll('input[name="wood_species"], input[name="wood_thickness"], input[name="roof_type"]').forEach(radio => {
+        radio.addEventListener('change', calculateCosts);
+    });
+
+    for (const key in priceInputs) {
+        priceInputs[key].addEventListener('input', calculateCosts);
+    }
+
+    document.getElementById('reset-prices-btn').addEventListener('click', () => {
+        populatePriceForm();
+        calculateCosts();
+    });
+    
+    function showSection(targetId) {
+        sections.forEach(section => {
+            section.classList.toggle('active', section.id === targetId);
+        });
+        navButtons.forEach(button => {
+            button.classList.toggle('active', button.dataset.target === targetId);
+        });
+    }
+    
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            showSection(button.dataset.target);
+        });
+    });
+
+    function init() {
+        populatePriceForm();
+        showSection('start');
+        setLanguage(currentLang);
+        calculateCosts();
+    }
+
+    init();
+});
+</script>
+</body>
+</html>
